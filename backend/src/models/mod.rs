@@ -37,6 +37,16 @@ pub struct BudgetCategory {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, ToSchema)]
+pub struct Tag {
+    pub id: i64,
+    pub user_id: i64,
+    pub label: String,
+    pub color: String,
+    pub stopped: bool,
+    pub usage_count: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, ToSchema)]
 pub struct Month {
     pub id: i64,
     pub user_id: i64,
@@ -111,6 +121,16 @@ pub struct ItemWithCategory {
     pub amount: f64,
     pub spent_on: NaiveDate,
     pub savings_destination: String,
+    #[sqlx(skip)]
+    pub tags: Vec<TagSummary>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, ToSchema)]
+pub struct TagSummary {
+    pub id: i64,
+    pub label: String,
+    pub color: String,
+    pub stopped: bool,
 }
 
 #[derive(Debug, Serialize, ToSchema)]

@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
-import { Plus, Trash2, Edit2, Check, X, Search, Filter } from "lucide-react";
-import { ItemWithCategory, BudgetCategory, api } from "../api/client";
+import { useEffect, useState, useMemo } from "react";
+import { Plus, Trash2, Edit2, Check, X, Search, Filter, Tags, Tag } from "lucide-react";
+import { ItemWithCategory, BudgetCategory, TagSummary, api } from "../api/client";
 import { Card } from "./ui/Card";
 import { Input } from "./ui/Input";
 import { Select } from "./ui/Select";
@@ -9,6 +9,122 @@ import { ReorderControls } from "./ui/ReorderControls";
 import { SortableHandle, SortableItem, SortableList } from "./ui/SortableList";
 import { useCurrency } from "../context/CurrencyContext";
 import { useSortableReorder } from "../hooks/useSortableReorder";
+import { ManageTags } from "./ManageTags";
+import { TagPicker } from "./TagPicker";
+
+function DesktopTagChips({ tags }: { tags: TagSummary[] }) {
+  if (tags.length === 0) return <span className="text-charcoal-400">–</span>;
+  const names = tags.map((tag) => tag.label).join(", ");
+  return (
+    <div
+      className="group relative flex w-fit max-w-full items-center gap-1 outline-none"
+      tabIndex={0}
+      aria-label={`Tags: ${names}`}
+      title={names}
+    >
+      {tags.slice(0, 2).map((tag) => (
+        <span
+          key={tag.id}
+          className="max-w-28 truncate rounded-md px-2 py-1 text-xs"
+          style={{ color: tag.color, borderColor: `${tag.color}60`, backgroundColor: `${tag.color}18` }}
+        >
+          {tag.label}
+        </span>
+      ))}
+      {tags.length > 2 && (
+        <span className="rounded-md bg-sand-200 px-2 py-1 text-xs text-charcoal-500 dark:bg-charcoal-800 dark:text-charcoal-300">
+          +{tags.length - 2}
+        </span>
+      )}
+      <span className="pointer-events-none absolute left-0 top-full z-20 mt-1 hidden whitespace-nowrap rounded bg-charcoal-900 px-2 py-1 text-xs text-white shadow group-hover:block group-focus:block">
+        {names}
+      </span>
+    </div>
+  );
+}
+
+function MobileTagMenu({ tags }: { tags: TagSummary[] }) {
+  if (tags.length === 0) return <span className="text-charcoal-400">–</span>;
+  return (
+    <details className="relative w-fit">
+      <summary
+        className="flex cursor-pointer list-none items-center gap-1 rounded-md border border-sand-300 px-2 py-1 text-xs text-charcoal-600 dark:border-charcoal-700 dark:text-sand-300 [&::-webkit-details-marker]:hidden"
+        aria-label={`Show ${tags.length} Tags`}
+      >
+        <Tag size={14} />
+        {tags.length}
+      </summary>
+      <div className="absolute left-1/2 top-full z-30 mt-2 min-w-36 -translate-x-1/2 rounded-md border border-sand-300 bg-charcoal-50 p-3 shadow-xl dark:border-charcoal-700 dark:bg-charcoal-900">
+        <div className="mb-2 text-xs font-semibold text-charcoal-700 dark:text-sand-200">
+          Tags <span className="ml-1 text-charcoal-400">{tags.length}</span>
+        </div>
+        <div className="space-y-2">
+          {tags.map((tag) => (
+            <div key={tag.id} className="flex items-center gap-2 whitespace-nowrap text-xs text-charcoal-700 dark:text-sand-200">
+              <span className="h-3 w-3 rounded-full" style={{ backgroundColor: tag.color }} />
+              {tag.label}
+            </div>
+          ))}
+        </div>
+      </div>
+    </details>
+  );
+}
+
+function TagFilter({
+  tags,
+  selectedIds,
+  onChange,
+}: {
+  tags: TagSummary[];
+  selectedIds: number[];
+  onChange: (ids: number[]) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const matchingTags = [...tags]
+    .filter((tag) => tag.label.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  return (
+    <details className="relative">
+      <summary className="flex h-9 w-40 cursor-pointer list-none items-center gap-2 rounded-md border border-sand-300 px-3 text-xs text-charcoal-700 dark:border-charcoal-700 dark:text-sand-200 [&::-webkit-details-marker]:hidden">
+        <Tag size={14} className="shrink-0 text-charcoal-400" />
+        <span className="truncate">{selectedIds.length ? `${selectedIds.length} Tags` : "All Tags"}</span>
+      </summary>
+      <div className="absolute right-0 z-30 mt-1 w-56 rounded-md border border-sand-300 bg-charcoal-50 p-2 shadow-xl dark:border-charcoal-700 dark:bg-charcoal-900">
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search Tags"
+          aria-label="Search Tags"
+          className="mb-2 h-8 text-xs"
+        />
+        <div className="max-h-48 space-y-1 overflow-y-auto">
+          {matchingTags.map((tag) => (
+            <label key={tag.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-sand-100 dark:hover:bg-charcoal-800">
+              <input
+                type="checkbox"
+                checked={selectedIds.includes(tag.id)}
+                onChange={() =>
+                  onChange(
+                    selectedIds.includes(tag.id)
+                      ? selectedIds.filter((id) => id !== tag.id)
+                      : [...selectedIds, tag.id]
+                  )
+                }
+              />
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: tag.color }} />
+              <span className="truncate">{tag.label}{tag.stopped ? " (Stopped)" : ""}</span>
+            </label>
+          ))}
+          {matchingTags.length === 0 && (
+            <div className="py-2 text-center text-xs text-charcoal-400">No Tags found</div>
+          )}
+        </div>
+      </div>
+    </details>
+  );
+}
 
 interface ItemsSectionProps {
   monthId: number;
@@ -32,35 +148,54 @@ export function ItemsSection({
   const [amount, setAmount] = useState("");
   const [categoryId, setCategoryId] = useState<string>("");
   const [spentOn, setSpentOn] = useState(new Date().toISOString().split("T")[0]);
+  const [isManagingTags, setIsManagingTags] = useState(false);
+  const [tagIds, setTagIds] = useState<number[]>([]);
+  const [formError, setFormError] = useState("");
 
   const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [filterTags, setFilterTags] = useState<TagSummary[]>([]);
+  const [filterTagIds, setFilterTagIds] = useState<number[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    void api.tags.list().then(setFilterTags);
+  }, []);
 
   const handleAdd = async () => {
     if (!description || !amount || !categoryId) return;
-    await api.items.create(monthId, {
-      description,
-      amount: parseFloat(amount),
-      category_id: parseInt(categoryId),
-      spent_on: spentOn,
-      savings_destination: "none",
-    });
-    resetForm();
-    await onUpdate();
+    try {
+      await api.items.create(monthId, {
+        description,
+        amount: parseFloat(amount),
+        category_id: parseInt(categoryId),
+        spent_on: spentOn,
+        savings_destination: "none",
+        tag_ids: tagIds,
+      });
+      resetForm();
+      await onUpdate();
+    } catch {
+      setFormError("Could not save this Spending Item. Check the selected Tags and try again.");
+    }
   };
 
   const handleUpdate = async (id: number) => {
     if (!description || !amount) return;
     // An uncategorized item can be saved without picking a category; it stays uncategorized.
-    await api.items.update(monthId, id, {
-      description,
-      amount: parseFloat(amount),
-      ...(categoryId ? { category_id: parseInt(categoryId) } : {}),
-      spent_on: spentOn,
-      savings_destination: "none",
-    });
-    resetForm();
-    await onUpdate();
+    try {
+      await api.items.update(monthId, id, {
+        description,
+        amount: parseFloat(amount),
+        ...(categoryId ? { category_id: parseInt(categoryId) } : {}),
+        spent_on: spentOn,
+        savings_destination: "none",
+        tag_ids: tagIds,
+      });
+      resetForm();
+      await onUpdate();
+    } catch {
+      setFormError("Could not save this Spending Item. Check the selected Tags and try again.");
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -74,6 +209,8 @@ export function ItemsSection({
     setAmount(item.amount.toString());
     setCategoryId(item.category_id?.toString() ?? "");
     setSpentOn(item.spent_on);
+    setTagIds(item.tags.map((tag) => tag.id));
+    setFormError("");
   };
 
   const resetForm = () => {
@@ -83,6 +220,8 @@ export function ItemsSection({
     setCategoryId("");
     setSpentOn(new Date().toISOString().split("T")[0]);
     setIsAdding(false);
+    setTagIds([]);
+    setFormError("");
   };
 
   const categoryOptions = categories.map((c) => ({ value: c.id, label: c.label }));
@@ -121,10 +260,14 @@ export function ItemsSection({
           item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
           (item.category_label ?? "uncategorized")
             .toLowerCase()
-            .includes(searchQuery.toLowerCase());
-        return matchesCategory && matchesSearch;
+            .includes(searchQuery.toLowerCase()) ||
+          item.tags.some((tag) => tag.label.toLowerCase().includes(searchQuery.toLowerCase()));
+        const matchesTags = filterTagIds.every((id) =>
+          item.tags.some((tag) => tag.id === id)
+        );
+        return matchesCategory && matchesSearch && matchesTags;
       });
-  }, [orderedSpendingItems, filterCategory, searchQuery]);
+  }, [orderedSpendingItems, filterCategory, filterTagIds, searchQuery]);
 
   const handleMove = async (index: number, direction: -1 | 1) => {
     const nextIndex = index + direction;
@@ -149,20 +292,39 @@ export function ItemsSection({
         <h3 className="text-sm font-semibold text-charcoal-700 dark:text-sand-200">
           Spending Items
         </h3>
-        {!isReadOnly && !isAdding && (
+        <div className="flex items-center gap-1">
           <button
-            onClick={() => {
-              setIsAdding(true);
-              if (categories.length > 0) {
-                setCategoryId(categories[0].id.toString());
-              }
-            }}
+            onClick={() => setIsManagingTags(true)}
+            aria-label="Manage Tags"
             className="p-2 md:p-1 hover:bg-sand-200 dark:hover:bg-charcoal-800 active:bg-sand-300 dark:active:bg-charcoal-700 transition-colors rounded touch-manipulation"
           >
-            <Plus size={16} />
+            <Tags size={16} />
           </button>
-        )}
+          {!isReadOnly && !isAdding && (
+            <button
+              onClick={() => {
+                setIsAdding(true);
+                if (categories.length > 0) {
+                  setCategoryId(categories[0].id.toString());
+                }
+              }}
+              aria-label="Add Spending Item"
+              className="p-2 md:p-1 hover:bg-sand-200 dark:hover:bg-charcoal-800 active:bg-sand-300 dark:active:bg-charcoal-700 transition-colors rounded touch-manipulation"
+            >
+              <Plus size={16} />
+            </button>
+          )}
+        </div>
       </div>
+
+      <ManageTags
+        isOpen={isManagingTags}
+        onClose={() => {
+          setIsManagingTags(false);
+          void api.tags.list().then(setFilterTags);
+          void onUpdate();
+        }}
+      />
 
       {isAdding && categories.length === 0 && (
         <div className="mb-4 p-4 bg-sand-100 dark:bg-charcoal-800 text-center rounded-lg">
@@ -216,6 +378,10 @@ export function ItemsSection({
               Cancel
             </Button>
           </div>
+          <div className="mt-3">
+            <TagPicker selectedIds={tagIds} onChange={setTagIds} />
+          </div>
+          {formError && <p className="mt-2 text-xs text-terracotta-600">{formError}</p>}
         </div>
       )}
 
@@ -229,7 +395,7 @@ export function ItemsSection({
             className="pl-9 h-9 text-xs"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <div className="relative w-40">
             <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-charcoal-400 z-10" />
             <Select
@@ -239,13 +405,15 @@ export function ItemsSection({
               className="pl-9 h-9 text-xs"
             />
           </div>
-          {(searchQuery || filterCategory !== "all") && (
+          <TagFilter tags={filterTags} selectedIds={filterTagIds} onChange={setFilterTagIds} />
+          {(searchQuery || filterCategory !== "all" || filterTagIds.length > 0) && (
             <Button
               variant="ghost"
               size="sm"
               onClick={() => {
                 setSearchQuery("");
                 setFilterCategory("all");
+                setFilterTagIds([]);
               }}
               className="h-9 px-2 text-[10px]"
             >
@@ -255,11 +423,11 @@ export function ItemsSection({
         </div>
       </div>
 
-      <div className="overflow-x-auto -mx-4 px-4">
-        <table className="w-full text-sm">
+      <div className="-mx-4 overflow-visible px-4">
+        <table className="w-full table-fixed text-sm sm:table-auto">
           <thead>
             <tr className="border-b border-sand-300 dark:border-charcoal-700">
-              <th className="text-left py-2 px-1 font-medium text-charcoal-600 dark:text-sand-400 text-xs md:text-sm">
+              <th className="w-14 text-left py-2 px-1 font-medium text-charcoal-600 dark:text-sand-400 text-xs sm:w-auto md:text-sm">
                 Date
               </th>
               <th className="text-left py-2 px-1 font-medium text-charcoal-600 dark:text-sand-400 text-xs md:text-sm">
@@ -268,10 +436,13 @@ export function ItemsSection({
               <th className="hidden text-left py-2 px-1 font-medium text-charcoal-600 dark:text-sand-400 text-xs sm:table-cell md:text-sm">
                 Category
               </th>
-              <th className="text-right py-2 px-1 font-medium text-charcoal-600 dark:text-sand-400 text-xs md:text-sm">
+              <th className="w-14 text-left py-2 px-1 font-medium text-charcoal-600 dark:text-sand-400 text-xs sm:w-auto md:text-sm">
+                Tags
+              </th>
+              <th className="w-20 text-right py-2 px-1 font-medium text-charcoal-600 dark:text-sand-400 text-xs sm:w-auto md:text-sm">
                 Amount
               </th>
-              {!isReadOnly && <th className="w-28 md:w-32"></th>}
+              {!isReadOnly && <th className="w-24 sm:w-28 md:w-32"></th>}
             </tr>
           </thead>
           <tbody>
@@ -305,13 +476,19 @@ export function ItemsSection({
                             className="text-xs"
                           />
                         </td>
-                        <td className="py-2">
+                        <td className="hidden py-2 sm:table-cell">
                           <Select
                             options={editCategoryOptions}
                             value={categoryId}
                             onChange={(e) => setCategoryId(e.target.value)}
                             className="text-xs"
                           />
+                        </td>
+                        <td className="py-2">
+                          <div className="min-w-0 sm:min-w-48">
+                            <TagPicker selectedIds={tagIds} onChange={setTagIds} />
+                          </div>
+                          {formError && <p className="mt-2 text-xs text-terracotta-600">{formError}</p>}
                         </td>
                         <td className="py-2">
                           <Input
@@ -367,6 +544,14 @@ export function ItemsSection({
                           >
                             {item.category_label ?? "Uncategorized"}
                           </span>
+                        </td>
+                        <td className="py-2 px-1">
+                          <div className="sm:hidden">
+                            <MobileTagMenu tags={item.tags} />
+                          </div>
+                          <div className="hidden sm:block">
+                            <DesktopTagChips tags={item.tags} />
+                          </div>
                         </td>
                         <td className={`py-2 px-1 text-right font-medium text-xs md:text-sm whitespace-nowrap text-terracotta-600 dark:text-terracotta-400`}>
                           {formatCurrency(item.amount)}

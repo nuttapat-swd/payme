@@ -1,5 +1,14 @@
 const BASE_URL = "/api";
 
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    public restorableTagId: number | null = null
+  ) {
+    super(`HTTP ${status}`);
+  }
+}
+
 async function request<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -14,7 +23,8 @@ async function request<T>(
   });
 
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
+    const body = await response.json().catch(() => null);
+    throw new ApiError(response.status, body?.restorable_tag_id ?? null);
   }
 
   if (response.status === 204) {
@@ -124,6 +134,16 @@ export const api = {
       request<void>(`/months/${monthId}/categories/${id}`, { method: "DELETE" }),
   },
 
+  tags: {
+    list: () => request<Tag[]>("/tags"),
+    create: (data: { label: string; color: string }) =>
+      request<Tag>("/tags", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: number, data: { label?: string; color?: string }) =>
+      request<Tag>(`/tags/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    stop: (id: number) => request<Tag>(`/tags/${id}/stop`, { method: "POST" }),
+    restore: (id: number) => request<Tag>(`/tags/${id}/restore`, { method: "POST" }),
+  },
+
   budgets: {
     list: (monthId: number) => request<MonthlyBudget[]>(`/months/${monthId}/budgets`),
     update: (monthId: number, budgetId: number, amount: number) =>
@@ -162,9 +182,9 @@ export const api = {
     list: (monthId: number) => request<ItemWithCategory[]>(`/months/${monthId}/items`),
     create: (
       monthId: number,
-      data: { category_id?: number; description: string; amount: number; spent_on: string; savings_destination?: string }
+      data: { category_id?: number; description: string; amount: number; spent_on: string; savings_destination?: string; tag_ids?: number[] }
     ) =>
-      request<Item>(`/months/${monthId}/items`, {
+      request<ItemWithCategory>(`/months/${monthId}/items`, {
         method: "POST",
         body: JSON.stringify(data),
       }),
@@ -177,9 +197,10 @@ export const api = {
         amount?: number;
         spent_on?: string;
         savings_destination?: string;
+        tag_ids?: number[];
       }
     ) =>
-      request<Item>(`/months/${monthId}/items/${itemId}`, {
+      request<ItemWithCategory>(`/months/${monthId}/items/${itemId}`, {
         method: "PUT",
         body: JSON.stringify(data),
       }),
@@ -319,13 +340,21 @@ export interface UserExport {
   retirement_savings?: number;
   fixed_expenses: { label: string; amount: number }[];
   categories: { label: string; default_amount: number; archived?: boolean }[];
+  tags?: { label: string; color: string; stopped: boolean }[];
   months: {
     year: number;
     month: number;
     is_closed: boolean;
     income_entries: { label: string; amount: number; paid_on?: string | null }[];
     budgets: { category_label: string; allocated_amount: number }[];
-    items: { category_label: string | null; description: string; amount: number; spent_on: string }[];
+    items: {
+      category_label: string | null;
+      description: string;
+      amount: number;
+      spent_on: string;
+      savings_destination?: string;
+      tags?: string[];
+    }[];
   }[];
 }
 
@@ -358,6 +387,15 @@ export interface BudgetCategory {
   label: string;
   default_amount: number;
   color: string;
+}
+
+export interface Tag {
+  id: number;
+  user_id: number;
+  label: string;
+  color: string;
+  stopped: boolean;
+  usage_count: number;
 }
 
 export interface MonthlyBudget {
@@ -398,6 +436,14 @@ export interface Item {
 export interface ItemWithCategory extends Item {
   category_label: string | null;
   category_color: string | null;
+  tags: TagSummary[];
+}
+
+export interface TagSummary {
+  id: number;
+  label: string;
+  color: string;
+  stopped: boolean;
 }
 
 export interface MonthlySavings {
