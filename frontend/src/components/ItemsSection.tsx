@@ -436,7 +436,7 @@ export function ItemsSection({
               <th className="hidden text-left py-2 px-1 font-medium text-charcoal-600 dark:text-sand-400 text-xs sm:table-cell md:text-sm">
                 Category
               </th>
-              <th className="w-14 text-left py-2 px-1 font-medium text-charcoal-600 dark:text-sand-400 text-xs sm:w-auto md:text-sm">
+              <th className="hidden text-left py-2 px-1 font-medium text-charcoal-600 dark:text-sand-400 text-xs sm:table-cell md:text-sm">
                 Tags
               </th>
               <th className="w-20 text-right py-2 px-1 font-medium text-charcoal-600 dark:text-sand-400 text-xs sm:w-auto md:text-sm">
@@ -475,6 +475,9 @@ export function ItemsSection({
                             onChange={(e) => setDescription(e.target.value)}
                             className="text-xs"
                           />
+                          <div className="mt-2 sm:hidden">
+                            <TagPicker selectedIds={tagIds} onChange={setTagIds} />
+                          </div>
                         </td>
                         <td className="hidden py-2 sm:table-cell">
                           <Select
@@ -484,8 +487,8 @@ export function ItemsSection({
                             className="text-xs"
                           />
                         </td>
-                        <td className="py-2">
-                          <div className="min-w-0 sm:min-w-48">
+                        <td className="hidden py-2 sm:table-cell">
+                          <div className="min-w-48">
                             <TagPicker selectedIds={tagIds} onChange={setTagIds} />
                           </div>
                           {formError && <p className="mt-2 text-xs text-terracotta-600">{formError}</p>}
@@ -523,14 +526,21 @@ export function ItemsSection({
                           <span className="md:hidden">{item.spent_on.slice(5)}</span>
                         </td>
                         <td className="py-2 px-1 text-charcoal-800 dark:text-sand-200 text-xs md:text-sm">
-                          <div className="flex max-w-[150px] items-center gap-1.5 truncate md:max-w-none">
+                          <div className="flex min-w-0 items-start gap-1.5">
                             {/* On phones the category column is hidden; its color dot rides along here */}
                             <span
-                              className="h-2 w-2 shrink-0 rounded-full sm:hidden"
+                              className="mt-1 h-2 w-2 shrink-0 rounded-full sm:hidden"
                               style={{ backgroundColor: item.category_color ?? "#71717a" }}
                               title={item.category_label ?? "Uncategorized"}
                             />
-                            <span className="truncate">{item.description}</span>
+                            <div className="min-w-0">
+                              <span className="line-clamp-2 sm:block sm:truncate">{item.description}</span>
+                              {item.tags.length > 0 && (
+                                <div className="mt-1 sm:hidden">
+                                  <MobileTagMenu tags={item.tags} />
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </td>
                         <td className="hidden py-2 px-1 sm:table-cell">
@@ -545,13 +555,8 @@ export function ItemsSection({
                             {item.category_label ?? "Uncategorized"}
                           </span>
                         </td>
-                        <td className="py-2 px-1">
-                          <div className="sm:hidden">
-                            <MobileTagMenu tags={item.tags} />
-                          </div>
-                          <div className="hidden sm:block">
-                            <DesktopTagChips tags={item.tags} />
-                          </div>
+                        <td className="hidden py-2 px-1 sm:table-cell">
+                          <DesktopTagChips tags={item.tags} />
                         </td>
                         <td className={`py-2 px-1 text-right font-medium text-xs md:text-sm whitespace-nowrap text-terracotta-600 dark:text-terracotta-400`}>
                           {formatCurrency(item.amount)}
