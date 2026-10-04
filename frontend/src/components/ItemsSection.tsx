@@ -3,6 +3,7 @@ import { Plus, Trash2, Edit2, Check, X, Search, Filter, Tags, Tag } from "lucide
 import { ItemWithCategory, BudgetCategory, TagSummary, api } from "../api/client";
 import { Card } from "./ui/Card";
 import { Input } from "./ui/Input";
+import { Modal } from "./ui/Modal";
 import { Select } from "./ui/Select";
 import { Button } from "./ui/Button";
 import { ReorderControls } from "./ui/ReorderControls";
@@ -205,6 +206,7 @@ export function ItemsSection({
   };
 
   const startEdit = (item: ItemWithCategory) => {
+    setIsAdding(false);
     setEditingId(item.id);
     setDescription(item.description);
     setAmount(item.amount.toString());
@@ -326,6 +328,56 @@ export function ItemsSection({
           void onUpdate();
         }}
       />
+
+      <Modal isOpen={editingId !== null} onClose={resetForm} title="Edit Spending Item">
+        <div className="space-y-4">
+          <Input
+            label="Description"
+            aria-label="Description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+          <Input
+            label="Amount"
+            aria-label="Amount"
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+          <Select
+            label="Category"
+            aria-label="Category"
+            options={editCategoryOptions}
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
+          />
+          <Input
+            label="Date"
+            aria-label="Date"
+            type="date"
+            value={spentOn}
+            onChange={(e) => setSpentOn(e.target.value)}
+          />
+          <div className="space-y-1">
+            <p className="text-xs text-charcoal-500 dark:text-charcoal-400">Tags</p>
+            <TagPicker selectedIds={tagIds} onChange={setTagIds} />
+          </div>
+          {formError && <p role="alert" className="text-sm text-terracotta-600">{formError}</p>}
+          <div className="flex gap-3">
+            <Button variant="secondary" onClick={resetForm} className="flex-1">
+              Cancel
+            </Button>
+            <Button
+              onClick={() => void handleUpdate(editingId!)}
+              disabled={!description || !amount || isReadOnly}
+              className="flex-1"
+            >
+              <Check size={16} className="mr-2" />
+              Save
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {isAdding && categories.length === 0 && (
         <div className="mb-4 p-4 bg-sand-100 dark:bg-charcoal-800 text-center rounded-lg">
@@ -459,68 +511,7 @@ export function ItemsSection({
                   className="border-b border-sand-200 dark:border-charcoal-800 hover:bg-sand-100 dark:hover:bg-charcoal-900/50 active:bg-sand-200 dark:active:bg-charcoal-900 transition-colors"
                 >
                   {({ attributes, listeners }) =>
-                    editingId === item.id ? (
-                      <>
-                        <td className="py-2">
-                          <Input
-                            type="date"
-                            value={spentOn}
-                            onChange={(e) => setSpentOn(e.target.value)}
-                            className="text-xs"
-                          />
-                        </td>
-                        <td className="py-2">
-                          <Input
-                            placeholder="Description"
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            className="text-xs"
-                          />
-                          <div className="mt-2 sm:hidden">
-                            <TagPicker selectedIds={tagIds} onChange={setTagIds} />
-                          </div>
-                        </td>
-                        <td className="hidden py-2 sm:table-cell">
-                          <Select
-                            options={editCategoryOptions}
-                            value={categoryId}
-                            onChange={(e) => setCategoryId(e.target.value)}
-                            className="text-xs"
-                          />
-                        </td>
-                        <td className="hidden py-2 sm:table-cell">
-                          <div className="min-w-48">
-                            <TagPicker selectedIds={tagIds} onChange={setTagIds} />
-                          </div>
-                          {formError && <p className="mt-2 text-xs text-terracotta-600">{formError}</p>}
-                        </td>
-                        <td className="py-2">
-                          <Input
-                            type="number"
-                            placeholder="Amount"
-                            value={amount}
-                            onChange={(e) => setAmount(e.target.value)}
-                            className="text-xs text-right"
-                          />
-                        </td>
-                        <td className="py-2">
-                          <div className="flex gap-0.5 md:gap-1 justify-end">
-                            <button
-                              onClick={() => handleUpdate(item.id)}
-                              className="p-2 md:p-1 text-sage-600 hover:bg-sage-100 dark:hover:bg-charcoal-800 active:bg-sage-200 dark:active:bg-charcoal-700 transition-colors rounded touch-manipulation"
-                            >
-                              <Check size={14} />
-                            </button>
-                            <button
-                              onClick={resetForm}
-                              className="p-2 md:p-1 text-charcoal-500 hover:bg-sand-200 dark:hover:bg-charcoal-800 active:bg-sand-300 dark:active:bg-charcoal-700 transition-colors rounded touch-manipulation"
-                            >
-                              <X size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </>
-                    ) : (
+                    (
                       <>
                         <td className="py-2 px-1 text-charcoal-600 dark:text-charcoal-400 text-xs md:text-sm whitespace-nowrap">
                           <span className="hidden md:inline">{item.spent_on}</span>
@@ -578,6 +569,7 @@ export function ItemsSection({
                               )}
                               <button
                                 onClick={() => startEdit(item)}
+                                aria-label={`Edit ${item.description}`}
                                 className="p-2 md:p-1 hover:bg-sand-200 dark:hover:bg-charcoal-800 active:bg-sand-300 dark:active:bg-charcoal-700 transition-colors rounded touch-manipulation"
                               >
                                 <Edit2 size={14} />
