@@ -11,6 +11,7 @@ import { useCurrency } from "../context/CurrencyContext";
 import { useSortableReorder } from "../hooks/useSortableReorder";
 import { ManageTags } from "./ManageTags";
 import { TagPicker } from "./TagPicker";
+import { dismissDetailsOnOutsideClick } from "./ui/dismissDetailsOnOutsideClick";
 
 function DesktopTagChips({ tags }: { tags: TagSummary[] }) {
   if (tags.length === 0) return <span className="text-charcoal-400">–</span>;
@@ -46,7 +47,7 @@ function DesktopTagChips({ tags }: { tags: TagSummary[] }) {
 function MobileTagMenu({ tags }: { tags: TagSummary[] }) {
   if (tags.length === 0) return <span className="text-charcoal-400">–</span>;
   return (
-    <details className="relative w-fit">
+    <details ref={dismissDetailsOnOutsideClick} className="relative w-fit">
       <summary
         className="flex cursor-pointer list-none items-center gap-1 rounded-md border border-sand-300 px-2 py-1 text-xs text-charcoal-600 dark:border-charcoal-700 dark:text-sand-300 [&::-webkit-details-marker]:hidden"
         aria-label={`Show ${tags.length} Tags`}
@@ -86,7 +87,7 @@ function TagFilter({
     .sort((a, b) => a.label.localeCompare(b.label));
 
   return (
-    <details className="relative">
+    <details ref={dismissDetailsOnOutsideClick} className="relative">
       <summary className="flex h-9 w-40 cursor-pointer list-none items-center gap-2 rounded-md border border-sand-300 px-3 text-xs text-charcoal-700 dark:border-charcoal-700 dark:text-sand-200 [&::-webkit-details-marker]:hidden">
         <Tag size={14} className="shrink-0 text-charcoal-400" />
         <span className="truncate">{selectedIds.length ? `${selectedIds.length} Tags` : "All Tags"}</span>
