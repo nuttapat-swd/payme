@@ -480,6 +480,7 @@ export function ItemsSection({
         <table className="w-full table-fixed text-sm sm:table-auto">
           <thead>
             <tr className="border-b border-sand-300 dark:border-charcoal-700">
+              {!isReadOnly && spendingItems.length > 1 && <th className="w-8" aria-label="Reorder"></th>}
               <th className="w-14 text-left py-2 px-1 font-medium text-charcoal-600 dark:text-sand-400 text-xs sm:w-auto md:text-sm">
                 Date
               </th>
@@ -495,7 +496,7 @@ export function ItemsSection({
               <th className="w-20 text-right py-2 px-1 font-medium text-charcoal-600 dark:text-sand-400 text-xs sm:w-auto md:text-sm">
                 Amount
               </th>
-              {!isReadOnly && <th className="w-24 sm:w-28 md:w-32"></th>}
+              {!isReadOnly && <th className="w-16 sm:w-20 md:w-24"></th>}
             </tr>
           </thead>
           <tbody>
@@ -513,6 +514,11 @@ export function ItemsSection({
                   {({ attributes, listeners }) =>
                     (
                       <>
+                        {!isReadOnly && spendingItems.length > 1 && (
+                          <td className="py-2 px-1">
+                            <SortableHandle attributes={attributes} listeners={listeners} />
+                          </td>
+                        )}
                         <td className="py-2 px-1 text-charcoal-600 dark:text-charcoal-400 text-xs md:text-sm whitespace-nowrap">
                           <span className="hidden md:inline">{item.spent_on}</span>
                           <span className="md:hidden">{item.spent_on.slice(5)}</span>
@@ -557,15 +563,12 @@ export function ItemsSection({
                           <td className="py-2 px-1">
                             <div className="flex gap-0.5 md:gap-1 justify-end">
                               {spendingItems.length > 1 && (
-                                <>
-                                  <SortableHandle attributes={attributes} listeners={listeners} />
-                                  <ReorderControls
-                                    index={index}
-                                    total={spendingItems.length}
-                                    onMove={handleMove}
-                                    className="mr-1"
-                                  />
-                                </>
+                                <ReorderControls
+                                  index={index}
+                                  total={spendingItems.length}
+                                  onMove={handleMove}
+                                  className="mr-1"
+                                />
                               )}
                               <button
                                 onClick={() => startEdit(item)}
